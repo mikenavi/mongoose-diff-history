@@ -6,7 +6,7 @@ const empty = require('deep-empty-object');
 const { assign } = require('power-assign');
 
 // try to find an id property, otherwise just use the index in the array
-const objectHash = (obj, idx) => obj._id || obj.id || `$$index: ${idx}`;
+const objectHash = (obj, idx) => obj?._id || obj?.id || `$$index: ${idx}`;
 const diffPatcher = require('jsondiffpatch').create({ objectHash });
 
 const History = require('./diffHistoryModel').model;
