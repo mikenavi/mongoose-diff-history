@@ -33,46 +33,49 @@ function checkRequired(opts, queryObject, updatedObject) {
 }
 
 function saveDiffObject(currentObject, original, updated, opts, queryObject) {
-    const { __user: user, __reason: reason, __session: session } =
-        (queryObject && queryObject.options) || currentObject;
+  const { __user: user, __reason: reason, __session: session } =
+    (queryObject && queryObject.options) || currentObject;
 
-    let diff = diffPatcher.diff(
-        JSON.parse(JSON.stringify(original)),
-        JSON.parse(JSON.stringify(updated))
-    );
+  let diff = diffPatcher.diff(
+    JSON.parse(JSON.stringify(original)),
+    JSON.parse(JSON.stringify(updated))
+  );
 
-    if (opts.omit) {
-        omit(diff, opts.omit, { cleanEmpty: true });
-    }
+  const dataSize = Buffer.byteLength(JSON.stringify(diff), 'utf8');
+  const isFile = dataSize > 14485760;
 
-    if (opts.pick) {
-        diff = pick(diff, opts.pick);
-    }
+  if (opts.omit) {
+    omit(diff, opts.omit, { cleanEmpty: true });
+  }
 
-    if (!diff || !Object.keys(diff).length || empty.all(diff)) {
-        return;
-    }
+  if (opts.pick) {
+    diff = pick(diff, opts.pick);
+  }
 
-    const collectionId = currentObject._id;
-    const collectionName =
-        currentObject.constructor.modelName || queryObject.model.modelName;
+  if (!diff || !Object.keys(diff).length || empty.all(diff) || isFile) {
+    return;
+  }
 
-    return History.findOne({ collectionId, collectionName })
-        .sort('-version')
-        .then(lastHistory => {
-            const history = new History({
-                collectionId,
-                collectionName,
-                diff,
-                user,
-                reason,
-                version: lastHistory ? lastHistory.version + 1 : 0
-            });
-            if (session) {
-                return history.save({ session });
-            }
-            return history.save();
-        });
+  const collectionId = currentObject._id;
+  const collectionName =
+    currentObject.constructor.modelName || queryObject.model.modelName;
+
+  return History.findOne({ collectionId, collectionName })
+    .sort('-version')
+    .then(lastHistory => {
+      const history = new History({
+        collectionId,
+        collectionName,
+        diff,
+        user,
+        reason,
+        version: lastHistory ? lastHistory.version + 1 : 0
+      });
+      if (session) {
+        return history.save({ session });
+      }
+      return history.save();
+    });
 }
 
 /* eslint-disable complexity */
